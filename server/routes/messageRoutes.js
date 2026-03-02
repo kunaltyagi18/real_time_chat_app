@@ -1,8 +1,8 @@
 import express from "express";
 import { protectRoute } from "../middleware/authMiddleware.js";
-import { upload } from "../config/upload.js"; // ✅ multer import
+import { upload } from "../middleware/Upload.js";
 import {
-  getUsers,              // ✅ correct name
+  getUsers,
   getMessages,
   markMessagesAsSeen,
   sendMessage,
@@ -19,11 +19,11 @@ messageRouter.get("/:id", protectRoute, getMessages);
 // Mark message as seen
 messageRouter.put("/mark/:id", protectRoute, markMessagesAsSeen);
 
-// Send message (with optional image)
+// Send message (text + optional image)
 messageRouter.post(
   "/send/:id",
   protectRoute,
-  upload.single("image"),  // ✅ multer middleware added
+  upload.single("image"),
   sendMessage
 );
 

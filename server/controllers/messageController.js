@@ -1,6 +1,8 @@
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { io, userSocketMap } from "../server.js";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 
 
 // ===============================
@@ -16,19 +18,19 @@ export const getUsers = async (req, res) => {
 
     const unseenMessages = {};
 
-    const promises = filteredUsers.map(async (user) => {
-      const count = await Message.countDocuments({
-        senderId: user._id,
-        receiverId: userId,
-        seen: false,
-      });
+    await Promise.all(
+      filteredUsers.map(async (user) => {
+        const count = await Message.countDocuments({
+          senderId: user._id,
+          receiverId: userId,
+          seen: false,
+        });
 
-      if (count > 0) {
-        unseenMessages[user._id] = count;
-      }
-    });
-
-    await Promise.all(promises);
+        if (count > 0) {
+          unseenMessages[user._id] = count;
+        }
+      })
+    );
 
     res.json({
       success: true,
@@ -36,14 +38,12 @@ export const getUsers = async (req, res) => {
       unseenMessages,
     });
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 
 
 // ===============================
@@ -61,7 +61,6 @@ export const getMessages = async (req, res) => {
       ],
     }).sort({ createdAt: 1 });
 
-    // mark as seen
     await Message.updateMany(
       { senderId: selectedUserId, receiverId: myId, seen: false },
       { seen: true }
@@ -69,14 +68,12 @@ export const getMessages = async (req, res) => {
 
     res.json({ success: true, messages });
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 
 
 // ===============================
@@ -95,7 +92,6 @@ export const markMessagesAsSeen = async (req, res) => {
       message: "Message marked as seen",
     });
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -104,9 +100,8 @@ export const markMessagesAsSeen = async (req, res) => {
 };
 
 
-
 // ===============================
-// 4️⃣ Send Message (Using Multer)
+// 4️⃣ Send Message (Cloudinary Version)
 // ===============================
 export const sendMessage = async (req, res) => {
   try {
@@ -116,19 +111,36 @@ export const sendMessage = async (req, res) => {
 
     let imageUrl = null;
 
-    // Multer file handling
+    // 🔥 If image exists → upload to Cloudinary
     if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
+      const streamUpload = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: "chat-app" },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+
+          streamifier
+            .createReadStream(req.file.buffer)
+            .pipe(stream);
+        });
+
+      const result = await streamUpload();
+      imageUrl = result.secure_url;
     }
 
+    // Create message
     const message = await Message.create({
       senderId,
       receiverId,
-      text,
+      text: text || "",
       image: imageUrl,
     });
 
-    // Emit to receiver if online
+    // 🔥 Emit to receiver if online
     const receiverSocketId = userSocketMap[receiverId];
 
     if (receiverSocketId) {
@@ -139,8 +151,8 @@ export const sendMessage = async (req, res) => {
       success: true,
       newMessage: message,
     });
+
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: error.message,

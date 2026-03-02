@@ -1,6 +1,8 @@
 import { generateToken } from "../config/utils.js";
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 
 
 // =============================
@@ -50,14 +52,12 @@ export const signup = async (req, res) => {
       message: "Account created successfully",
     });
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: "Error creating account",
     });
   }
 };
-
 
 
 // =============================
@@ -103,14 +103,12 @@ export const login = async (req, res) => {
       message: "Logged in successfully",
     });
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: "Error logging in",
     });
   }
 };
-
 
 
 // =============================
@@ -124,9 +122,8 @@ export const checkAuth = (req, res) => {
 };
 
 
-
 // =============================
-// 4️⃣ UPDATE PROFILE (Multer)
+// 4️⃣ UPDATE PROFILE (Cloudinary)
 // =============================
 export const updateProfile = async (req, res) => {
   try {
@@ -135,9 +132,30 @@ export const updateProfile = async (req, res) => {
 
     let profilePicUrl;
 
-    // If image uploaded using multer
+    // 🔥 If image uploaded → upload to Cloudinary
     if (req.file) {
-      profilePicUrl = `/uploads/${req.file.filename}`;
+      const streamUpload = () =>
+        new Promise((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "chat-app/profile-pics",
+              transformation: [
+                { width: 300, height: 300, crop: "fill" }, // square crop
+              ],
+            },
+            (error, result) => {
+              if (result) resolve(result);
+              else reject(error);
+            }
+          );
+
+          streamifier
+            .createReadStream(req.file.buffer)
+            .pipe(stream);
+        });
+
+      const result = await streamUpload();
+      profilePicUrl = result.secure_url;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -155,8 +173,8 @@ export const updateProfile = async (req, res) => {
       user: updatedUser,
       message: "Profile updated successfully",
     });
+
   } catch (error) {
-    console.log(error.message);
     res.status(500).json({
       success: false,
       message: "Error updating profile",
