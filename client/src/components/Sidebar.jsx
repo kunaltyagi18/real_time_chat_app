@@ -1,138 +1,107 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useChat } from '../context/ChatContext'
-import styles from './Sidebar.module.css'
-
-const Avatar = ({ src, name, size = 40, online }) => {
-  const initials = name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??'
-  const colors = ['#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a']
-  const color = colors[name?.charCodeAt(0) % colors.length] || colors[0]
-
-  return (
-    <div className={styles.avatarWrapper} style={{ width: size, height: size }}>
-      {src ? (
-        <img src={src} alt={name} className={styles.avatarImg} />
-      ) : (
-        <div className={styles.avatarFallback} style={{ background: color, fontSize: size * 0.35 }}>
-          {initials}
-        </div>
-      )}
-      {online && <span className={styles.onlineDot} />}
-    </div>
-  )
-}
+import { User, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useChatStore } from '../store/chatStore';
+import { useAuthStore } from '../store/authStore';
 
 export default function Sidebar() {
-  const { user, logout } = useAuth()
-  const { users, selectedUser, setSelectedUser, unseenMessages, onlineUsers } = useChat()
-  const [search, setSearch] = useState('')
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const users = useChatStore((state) => state.users);
+  const selectedUser = useChatStore((state) => state.selectedUser);
+  const setSelectedUser = useChatStore((state) => state.setSelectedUser);
+  const onlineUsers = useChatStore((state) => state.onlineUsers);
+  const currentUser = useAuthStore((state) => state.user);
 
-  const filtered = users.filter(u =>
-    u.fullName.toLowerCase().includes(search.toLowerCase())
-  )
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+  };
 
   return (
-    <div className={styles.sidebar}>
-      {/* Header */}
-      <div className={styles.header}>
-        <div className={styles.headerTop}>
-          <div className={styles.brandMark}>
-            <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
-              <path d="M4 8C4 6.9 4.9 6 6 6H18C19.1 6 20 6.9 20 8V16C20 17.1 19.1 18 18 18H14L10 21V18H6C4.9 18 4 17.1 4 16V8Z" fill="var(--blue-500)"/>
-            </svg>
-            <span>ChatFlow</span>
+    <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
+      <div className="p-4 bg-gray-900 border-b border-gray-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+            {currentUser?.profilePic ? (
+              <img
+                src={currentUser.profilePic}
+                alt={currentUser.fullName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-5 h-5 text-gray-400" />
+            )}
           </div>
-          <div className={styles.headerActions}>
-            <button onClick={() => navigate('/profile')} className={styles.iconBtn} title="Profile">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                <circle cx="12" cy="8" r="4"/>
-                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
-              </svg>
-            </button>
-            <button onClick={logout} className={styles.iconBtn} title="Logout">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="18" height="18">
-                <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
-            </button>
+          <div>
+            <h2 className="text-white font-semibold">
+              {currentUser?.fullName}
+            </h2>
           </div>
         </div>
 
-        {/* Current User */}
-        <div className={styles.me}>
-          <Avatar src={user?.profilePic} name={user?.fullName} size={36} />
-          <div className={styles.meInfo}>
-            <span className={styles.meName}>{user?.fullName}</span>
-            <span className={styles.meStatus}>
-              <span className={styles.statusDot} />
-              Online
-            </span>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className={styles.search}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16" className={styles.searchIcon}>
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
+        <button
+          onClick={() => navigate('/profile')}
+          className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+        >
+          <Settings className="w-5 h-5 text-gray-400" />
+        </button>
       </div>
 
-      {/* Users List */}
-      <div className={styles.list}>
-        {filtered.length === 0 ? (
-          <div className={styles.empty}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="40" height="40" style={{color: 'var(--gray-300)'}}>
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
-              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
-            </svg>
-            <p>No users found</p>
+      <div className="flex-1 overflow-y-auto">
+        {users.length === 0 ? (
+          <div className="p-4 text-center text-gray-400">
+            No users available
           </div>
         ) : (
-          filtered.map(u => {
-            const isOnline = onlineUsers.includes(u._id)
-            const unseen = unseenMessages[u._id] || 0
-            const isActive = selectedUser?._id === u._id
-
-            return (
+          <div className="divide-y divide-gray-700">
+            {users.map((user) => (
               <button
-                key={u._id}
-                className={`${styles.userItem} ${isActive ? styles.active : ''}`}
-                onClick={() => setSelectedUser(u)}
+                key={user._id}
+                onClick={() => handleUserSelect(user)}
+                className={`w-full p-4 flex items-center gap-3 hover:bg-gray-700 transition-colors ${
+                  selectedUser?._id === user._id ? 'bg-gray-700' : ''
+                }`}
               >
-                <Avatar src={u.profilePic} name={u.fullName} size={44} online={isOnline} />
-                <div className={styles.userInfo}>
-                  <span className={styles.userName}>{u.fullName}</span>
-                  <span className={styles.userBio}>{u.bio || 'Hey there!'}</span>
-                </div>
-                <div className={styles.userMeta}>
-                  {unseen > 0 && (
-                    <span className={styles.badge}>{unseen > 9 ? '9+' : unseen}</span>
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
+                    {user.profilePic ? (
+                      <img
+                        src={user.profilePic}
+                        alt={user.fullName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+
+                  {onlineUsers.includes(user._id) && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-800"></div>
                   )}
-                  {isOnline && !unseen && (
-                    <span className={styles.onlineTag}>active</span>
+                </div>
+
+                <div className="flex-1 text-left">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-white font-medium">
+                      {user.fullName}
+                    </h3>
+
+                    {user.unseenCount ? (
+                      <span className="bg-green-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                        {user.unseenCount}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {user.bio && (
+                    <p className="text-gray-400 text-sm truncate">
+                      {user.bio}
+                    </p>
                   )}
                 </div>
               </button>
-            )
-          })
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Footer */}
-      <div className={styles.footer}>
-        <span>{onlineUsers.length} online</span>
-        <span>•</span>
-        <span>{users.length} contacts</span>
-      </div>
     </div>
-  )
+  );
 }
