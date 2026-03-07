@@ -1,15 +1,18 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
-import { useAuth } from './context/AuthContext'
+import { useAuthStore } from './store/authStore'
+import { api } from './lib/api'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Chat from './pages/Chat'
 import Profile from './pages/Profile'
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isLoading = useAuthStore((state) => state.isLoading)
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-xl">Loading...</div>
@@ -25,9 +28,10 @@ function ProtectedRoute({ children }) {
 }
 
 function PublicRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const isLoading = useAuthStore((state) => state.isLoading)
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-white text-xl">Loading...</div>
@@ -42,9 +46,42 @@ function PublicRoute({ children }) {
   return <>{children}</>
 }
 
+function AppInit() {
+  const setUser = useAuthStore((state) => state.setUser)
+  const setLoading = useAuthStore((state) => state.setLoading)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setLoading(false)
+      return
+    }
+
+    api.get('/auth/check')
+      .then(({ data }) => {
+        if (data.success) {
+          setUser(data.user)
+        } else {
+          localStorage.removeItem('token')
+          setUser(null)
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('token')
+        setUser(null)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <AppInit />
       <Toaster
         position="top-center"
         toastOptions={{

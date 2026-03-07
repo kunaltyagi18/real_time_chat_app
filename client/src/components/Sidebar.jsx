@@ -1,12 +1,18 @@
 import { User, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useChat } from '../context/ChatContext'
-import { useAuth } from '../context/AuthContext'
+import { useChatStore } from '../store/chatStore'
+import { useAuthStore } from '../store/authStore'
 
 export default function Sidebar() {
   const navigate = useNavigate()
-  const { users, selectedUser, setSelectedUser, onlineUsers } = useChat()
-  const { user: currentUser } = useAuth()
+  const users = useChatStore((state) => state.users)
+  const selectedUser = useChatStore((state) => state.selectedUser)
+  const setSelectedUser = useChatStore((state) => state.setSelectedUser)
+  const onlineUsers = useChatStore((state) => state.onlineUsers)
+  const currentUser = useAuthStore((state) => state.user)
+
+  // Filter out users without a name
+  const validUsers = users.filter((u) => u.fullName && u.fullName.trim() !== '')
 
   return (
     <div className="w-full md:w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
@@ -36,11 +42,11 @@ export default function Sidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {users.length === 0 ? (
+        {validUsers.length === 0 ? (
           <div className="p-4 text-center text-gray-400">No users available</div>
         ) : (
           <div className="divide-y divide-gray-700">
-            {users.map((user) => (
+            {validUsers.map((user) => (
               <button
                 key={user._id}
                 onClick={() => setSelectedUser(user)}

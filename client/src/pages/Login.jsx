@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Mail, Lock, MessageCircle } from 'lucide-react'
-import { useAuth } from '../context/AuthContext'
+import { useAuthStore } from '../store/authStore'
+import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 
 export default function Login() {
@@ -9,14 +10,19 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const setUser = useAuthStore((state) => state.setUser)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
     try {
-      const data = await login({ email, password })
-      if (data.success) navigate('/chat')
+      const { data } = await api.post('/auth/login', { email, password })
+      if (data.success) {
+        localStorage.setItem('token', data.token)
+        setUser(data.userData)
+        toast.success('Welcome back!')
+        navigate('/chat')
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed')
     } finally {
@@ -36,7 +42,7 @@ export default function Login() {
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
               <div className="relative">
@@ -68,13 +74,13 @@ export default function Login() {
             </div>
 
             <button
-              type="submit"
+              onClick={handleSubmit}
               disabled={isLoading}
               className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </button>
-          </form>
+          </div>
 
           <p className="mt-6 text-center text-gray-400">
             Don't have an account?{' '}

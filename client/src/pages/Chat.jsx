@@ -18,7 +18,6 @@ export default function Chat() {
     if (user) {
       fetchUsers();
 
-      // Socket sirf ek baar setup karo
       if (!socketSetup.current) {
         socketSetup.current = true;
         setupSocket();
@@ -34,9 +33,18 @@ export default function Chat() {
   const fetchUsers = async () => {
     try {
       const response = await api.get('/messages/sidebar');
-      // Server returns { success, users, unseenMessages }
-      const usersData = response.data.users || response.data;
-      setUsers(Array.isArray(usersData) ? usersData : []);
+      const { users: usersData, unseenMessages } = response.data;
+
+      if (Array.isArray(usersData)) {
+        // Attach unseenCount to each user and filter out nameless ones
+        const usersWithUnseen = usersData
+          .filter((u) => u.fullName && u.fullName.trim() !== '')
+          .map((u) => ({
+            ...u,
+            unseenCount: unseenMessages?.[u._id] || 0,
+          }));
+        setUsers(usersWithUnseen);
+      }
     } catch (error) {
       console.error('Fetch users error:', error);
       toast.error('Failed to fetch users');
