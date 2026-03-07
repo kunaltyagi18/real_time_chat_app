@@ -1,115 +1,76 @@
-import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, FileText, Camera, ArrowLeft, LogOut } from 'lucide-react';
-import { api } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
-import toast from 'react-hot-toast';
+import { useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { User, FileText, Camera, ArrowLeft, LogOut } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import toast from 'react-hot-toast'
 
 export default function Profile() {
-  const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
-  const logout = useAuthStore((state) => state.logout);
-
-  const [fullName, setFullName] = useState(user?.fullName || '');
-  const [bio, setBio] = useState(user?.bio || '');
-  const [isLoading, setIsLoading] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
-
-  const fileInputRef = useRef(null);
-  const navigate = useNavigate();
+  const { user, updateProfile, logout } = useAuth()
+  const [fullName, setFullName] = useState(user?.fullName || '')
+  const [bio, setBio] = useState(user?.bio || '')
+  const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState(null)
+  const [previewImage, setPreviewImage] = useState(null)
+  const fileInputRef = useRef(null)
+  const navigate = useNavigate()
 
   const handleImageChange = (e) => {
-    const file = e.target.files?.[0];
-
+    const file = e.target.files?.[0]
     if (file) {
-      const reader = new FileReader();
-
-      reader.onloadend = () => {
-        setPreviewImage(reader.result);
-      };
-
-      reader.readAsDataURL(file);
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setPreviewImage(reader.result)
+      reader.readAsDataURL(file)
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-
+    e.preventDefault()
+    setIsLoading(true)
     try {
-      const formData = new FormData();
-      formData.append('fullName', fullName);
-      formData.append('bio', bio);
-
-      if (fileInputRef.current?.files?.[0]) {
-        formData.append('profilePic', fileInputRef.current.files[0]);
-      }
-
-      const response = await api.put('/auth/update-profile', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      setUser(response.data.user);
-      toast.success('Profile updated successfully!');
-      setPreviewImage(null);
+      await updateProfile({ fullName, bio, imageFile })
+      setImageFile(null)
+      setPreviewImage(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Update failed');
+      toast.error(error.response?.data?.message || 'Update failed')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
-    toast.success('Logged out successfully');
-  };
+    logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="max-w-2xl mx-auto px-4 py-8">
-
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate('/chat')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-          >
+          <button onClick={() => navigate('/chat')} className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-5 h-5" />
             <span>Back to Chat</span>
           </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors"
-          >
+          <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 hover:text-red-300 transition-colors">
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
           </button>
         </div>
 
         <div className="bg-gray-800 rounded-lg shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-white mb-6">
-            Profile Settings
-          </h1>
+          <h1 className="text-2xl font-bold text-white mb-6">Profile Settings</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-
             <div className="flex flex-col items-center mb-8">
-
               <div className="relative">
-
                 <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
                   {previewImage || user?.profilePic ? (
-                    <img
-                      src={previewImage || user?.profilePic}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={previewImage || user?.profilePic} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <User className="w-16 h-16 text-gray-400" />
                   )}
                 </div>
-
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -117,31 +78,15 @@ export default function Profile() {
                 >
                   <Camera className="w-5 h-5 text-white" />
                 </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               </div>
-
-              <p className="text-gray-400 text-sm mt-4">
-                Click the camera icon to change photo
-              </p>
-
+              <p className="text-gray-400 text-sm mt-4">Click the camera icon to change photo</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Full Name
-              </label>
-
+              <label className="block text-sm font-medium text-gray-300 mb-2">Full Name</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-
                 <input
                   type="text"
                   value={fullName}
@@ -154,30 +99,20 @@ export default function Profile() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email
-              </label>
-
+              <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
               <input
                 type="email"
-                value={user?.email}
+                value={user?.email || ''}
                 disabled
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-gray-500 cursor-not-allowed"
               />
-
-              <p className="text-gray-500 text-xs mt-1">
-                Email cannot be changed
-              </p>
+              <p className="text-gray-500 text-xs mt-1">Email cannot be changed</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Bio
-              </label>
-
+              <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
               <div className="relative">
                 <FileText className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
@@ -195,10 +130,9 @@ export default function Profile() {
             >
               {isLoading ? 'Updating...' : 'Update Profile'}
             </button>
-
           </form>
         </div>
       </div>
     </div>
-  );
+  )
 }

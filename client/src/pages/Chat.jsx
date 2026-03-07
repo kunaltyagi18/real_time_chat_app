@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { api } from '../lib/api';
-import { connectSocket } from '../lib/socket';
+import { connectSocket, disconnectSocket } from '../lib/socket';
 import { useChatStore } from '../store/chatStore';
 import { useAuthStore } from '../store/authStore';
 import Sidebar from '../components/Sidebar';
@@ -12,19 +12,33 @@ export default function Chat() {
   const setUsers = useChatStore((state) => state.setUsers);
   const addMessage = useChatStore((state) => state.addMessage);
   const setOnlineUsers = useChatStore((state) => state.setOnlineUsers);
+  const socketSetup = useRef(false);
 
   useEffect(() => {
     if (user) {
       fetchUsers();
-      setupSocket();
+
+      // Socket sirf ek baar setup karo
+      if (!socketSetup.current) {
+        socketSetup.current = true;
+        setupSocket();
+      }
     }
+
+    return () => {
+      disconnectSocket();
+      socketSetup.current = false;
+    };
   }, [user]);
 
   const fetchUsers = async () => {
     try {
       const response = await api.get('/messages/sidebar');
-      setUsers(response.data);
+      // Server returns { success, users, unseenMessages }
+      const usersData = response.data.users || response.data;
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
+      console.error('Fetch users error:', error);
       toast.error('Failed to fetch users');
     }
   };
@@ -40,13 +54,7 @@ export default function Chat() {
 
     socket.on('newMessage', (message) => {
       addMessage(message);
-      toast.success('New message received');
     });
-
-    return () => {
-      socket.off('getOnlineUsers');
-      socket.off('newMessage');
-    };
   };
 
   return (
