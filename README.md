@@ -13,7 +13,6 @@ ChatFlow/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Sidebar.jsx         # User list, search, online status
-│   │   │   ├── Sidebar.module.css
 │   │   │   ├── ChatWindow.jsx      # Message area + input
 │   │   │   └── ChatWindow.module.css
 │   │   ├── context/
@@ -24,9 +23,7 @@ ChatFlow/
 │   │   │   ├── SignupPage.jsx
 │   │   │   ├── ChatPage.jsx
 │   │   │   ├── ProfilePage.jsx
-│   │   │   └── Auth.module.css
-│   │   │   └── ChatPage.module.css
-│   │   │   └── ProfilePage.module.css
+│   │   │  
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
@@ -40,6 +37,7 @@ ChatFlow/
     ├── middleware/
     ├── models/
     ├── routes/
+    ├── seed.js
     ├── server.js
     └── package.json
 ```
